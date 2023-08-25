@@ -4,6 +4,9 @@ ENV TZ=Pacific/Auckland
 RUN apt-get update
 RUN apt-get -y install git python3 python3-pip
 RUN apt-get update && apt-get -y install vim
+RUN apt-get update && apt-get -y install nano
+
+RUN apt-get -y install ffmpeg libsm6 libxext6
 
 # install cares_lib
 COPY ./cares_lib /cares_lib
@@ -18,9 +21,6 @@ RUN pip install --editable /cares_reinforcement_learning
 # copy Gripper-Code
 COPY ./Gripper-Code /Gripper-Code
 RUN pip install -r /Gripper-Code/requirements.txt
-
-RUN apt-get -y install ffmpeg libsm6 libxext6
-
 
 # RUN pip install swig==4.1.1
 # RUN apt-get -y install patchelf libosmesa6-dev libegl1-mesa libgl1-mesa-glx libglfw3 libglew-dev

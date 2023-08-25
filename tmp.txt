@@ -1,0 +1,1 @@
+python3 training_loop.py --learning_config config_examples/learning_config_example.json --env_config config_examples/env_4DOF_config_ID4.json --gripper_config config_examples/gripper_4DOF_config.json --object_config config_examples/object_config_IDx.json
