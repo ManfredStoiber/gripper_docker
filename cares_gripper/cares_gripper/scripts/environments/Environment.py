@@ -20,7 +20,8 @@ from cares_lib.dynamixel.Servo import DynamixelServoError
 
 class Environment(ABC):
     def __init__(self, env_config: EnvironmentConfig, gripper_config: GripperConfig):
-        self.gripper = Gripper(gripper_config)
+        self.gripper_config = gripper_config
+        self.gripper = Gripper(self.gripper_config)
         self.camera = Camera(env_config.camera_id, env_config.camera_matrix, env_config.camera_distortion)
 
         self.observation_type = env_config.observation_type
@@ -37,6 +38,10 @@ class Environment(ABC):
 
         self.k = 3
         self.frames_stacked = deque([], maxlen=self.k)
+
+    def restart_gripper(self):
+        self.gripper = Gripper(self.gripper_config)
+
 
     def reset(self):
         try:
