@@ -6,6 +6,7 @@ import dynamixel_sdk as dxl
 import time
 
 from cares_lib.dynamixel.Servo import Servo, DynamixelServoError, ControlMode
+from cares_lib.dynamixel.ServoXL330 import ServoXL330
 from cares_lib.slack_bot.SlackBot import SlackBot
 
 from cares_gripper.scripts.configurations import GripperConfig
@@ -26,6 +27,7 @@ def handle_gripper_error(error):
     logging.info("Please fix the gripper and press enter to try again or x to quit: ")
     # message_slack(f"{error}, please fix before the programme continues")
     value = input()
+    raise Exception("Tmp Exception to prevent waiting for input")
     if value == 'x':
         logging.info("Giving up correcting gripper")
         return True
@@ -45,24 +47,29 @@ class Gripper(object):
         self.home_pose = config.home_pose
 
         self.device_name = config.device_name
+        self.target_device_name = config.target_device_name
         self.baudrate = config.baudrate
+        self.target_baudrate = config.target_baudrate
 
         self.protocol = 2  # NOTE: XL-320 uses protocol 2, update if we ever use other servos
 
         self.port_handler = dxl.PortHandler(self.device_name)
+        self.target_port_handler = dxl.PortHandler("/dev/ttyUSB1")
         self.packet_handler = dxl.PacketHandler(self.protocol)
         self.setup_handlers()
 
         self.group_bulk_write = dxl.GroupBulkWrite(self.port_handler, self.packet_handler)
         self.group_bulk_read = dxl.GroupBulkRead(self.port_handler, self.packet_handler)
+        self.target_group_bulk_write = dxl.GroupBulkWrite(self.target_port_handler, self.packet_handler)
+        self.target_group_bulk_read = dxl.GroupBulkRead(self.target_port_handler, self.packet_handler)
 
         self.servos = {}
         self.target_servo = None
 
         if config.actuated_target:
             try:
-                self.target_servo = Servo(self.port_handler, self.packet_handler, self.protocol, config.num_motors + 1,
-                                          0, config.torque_limit, config.speed_limit, 1023, 0)
+                self.target_servo = ServoXL330(self.target_port_handler, self.packet_handler, self.protocol, 1,
+                                          0, config.torque_limit, config.speed_limit, 100000, -100000)
             except DynamixelServoError as error:
                 raise DynamixelServoError(f"Gripper#{self.gripper_id}: Failed to initialise target servo") from error
 
@@ -82,12 +89,22 @@ class Gripper(object):
             logging.error(error_message)
             raise IOError(error_message)
         logging.info(f"Succeeded to open port {self.device_name}")
+        if not self.target_port_handler.openPort():
+            error_message = f"Failed to open port {self.target_device_name}"
+            logging.error(error_message)
+            raise IOError(error_message)
+        logging.info(f"Succeeded to open port {self.target_device_name}")
 
         if not self.port_handler.setBaudRate(self.baudrate):
             error_message = f"Failed to change the baudrate to {self.baudrate}"
             logging.error(error_message)
             raise IOError(error_message)
         logging.info(f"Succeeded to change the baudrate to {self.baudrate}")
+        if not self.target_port_handler.setBaudRate(self.target_baudrate):
+            error_message = f"Failed to change the baudrate to {self.target_baudrate}"
+            logging.error(error_message)
+            raise IOError(error_message)
+        logging.info(f"Succeeded to change the baudrate to {self.target_baudrate}")
 
     @backoff.on_exception(backoff.expo, DynamixelServoError, jitter=None, giveup=handle_gripper_error)
     def setup_servos(self):
@@ -96,7 +113,7 @@ class Gripper(object):
                 servo.enable()
 
             if self.target_servo is not None:
-                self.target_servo.enable()
+                self.target_servo.enable(control_mode=ControlMode.EXTENDED_POSITION)
 
         except DynamixelServoError as error:
             raise DynamixelServoError(f"Gripper#{self.gripper_id}: failed to setup servos") from error
@@ -269,7 +286,9 @@ class Gripper(object):
     @backoff.on_exception(backoff.expo, DynamixelServoError, jitter=None, giveup=handle_gripper_error)
     def home(self):
         try:
+            self.move([400, 300, 600, 680])
             self.move(self.home_pose)
+            self.target_servo.move(4096 * 2)
             if self.target_servo is not None:
                 reset_home_position = random.randint(0, 1023)
                 self.target_servo.move(reset_home_position)

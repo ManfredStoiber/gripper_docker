@@ -40,7 +40,9 @@ class GripperConfig(BaseModel):
     gripper_type: int
     gripper_id: int
     device_name: str
+    target_device_name: str
     baudrate: int
+    target_baudrate: int
     torque_limit: int
     speed_limit: int
     num_motors: int
