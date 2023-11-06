@@ -1,32 +1,12 @@
 import cv2
 import math
 import cares_lib.utils.utils as utils
-import numpy as np
 
 class ArucoDetector:
     def __init__(self, marker_size, dictionary_id=cv2.aruco.DICT_4X4_50):
         self.dictionary = cv2.aruco.Dictionary_get(dictionary_id)
         self.aruco_params = cv2.aruco.DetectorParameters_create()
         self.marker_size = marker_size
-        self.t_vecs = []
-        
-    def calculate_target_position(self, goal_x_in_pixel, goal_y_in_pixel, camera_matrix):
-        z  = self.t_vecs[0, 0, 2]
-        
-        cx = camera_matrix[0, 2]
-        fx = camera_matrix[0, 0]
-        cy = camera_matrix[1, 2]
-        fy = camera_matrix[1, 1]
-
-        px = (goal_x_in_pixel - cx) / fx
-        py = (goal_y_in_pixel - cy) / fy
-
-        px = px * z
-        py = py * z
-
-        target_point_wrt_camera = (px, py)
-        return np.array(target_point_wrt_camera)
-
 
     def get_orientation(self, r_vec):
         r_matrix, _ = cv2.Rodrigues(r_vec)
@@ -70,10 +50,10 @@ class ArucoDetector:
                 cv2.drawFrameAxes(image_copy, camera_matrix,
                                camera_distortion, r_vecs[i], t_vecs[i], self.marker_size/2.0, 3)
 
-            # if display:
-            #     cv2.imshow("Frame", image_copy)
-            #     cv2.waitKey(100)
-            self.t_vecs = t_vecs
+            if display:
+                cv2.imshow("Frame", image_copy)
+                cv2.waitKey(100)
+
             for i in range(0, len(r_vecs)):
                 id = ids[i][0]
                 r_vec = r_vecs[i]

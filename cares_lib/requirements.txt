@@ -1,3 +1,5 @@
 numpy
 slackclient
 dynamixel-sdk
+opencv-contrib-python==4.6.0.66
+opencv-python==3.4.16.59
